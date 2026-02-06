@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Virtual env
+venv/
+.venv/
+
+# PyInstaller build outputs
+build/
+dist/
+
+# Temp files
+backend/temp/
+*.xlsx
+
+# Windows
+Thumbs.db

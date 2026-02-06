@@ -1,0 +1,7 @@
+1.0.1 (2026-02-06)
+- Cải tiến ribbon: bỏ group, căn chỉnh chiều cao, layout gọn hơn.
+- Bổ sung status bar mỏng với view mode, zoom và loading.
+- Thêm chọn sheet nhanh trong result view.
+- Thêm Ctrl + Scroll để zoom, đồng bộ theo Sync.
+- Sửa lỗi font size khi file chỉ có 1 sheet.
+- Thêm splitter và border rõ ràng giữa 2 side.

@@ -1,0 +1,11 @@
+{
+    "package":  {
+                    "path":  "package.zip",
+                    "sha256":  "51ffd1025ebe8b6a07edd8c8e14967a085e945f15c90427b409fca80200a03f1",
+                    "size":  65090567
+                },
+    "app_exe":  "DocCompareAI.exe",
+    "version":  "1.0.4",
+    "release_date":  "2026-02-06",
+    "notes":  "Release 1.0.4"
+}
