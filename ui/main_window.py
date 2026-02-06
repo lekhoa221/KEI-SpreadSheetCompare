@@ -115,11 +115,25 @@ class MainWindow(QMainWindow):
             # Running as compiled executable
             base_path = Path(sys._MEIPASS)
             self.icon_dir = base_path / "ui" / "assets" / "icons"
+            logo_assets = base_path / "ui" / "assets"
+            logo_root = base_path / "ui"
         else:
             # Running source
-            self.icon_dir = Path(__file__).resolve().parent / "assets" / "icons"
+            ui_root = Path(__file__).resolve().parent
+            self.icon_dir = ui_root / "assets" / "icons"
             if not self.icon_dir.exists():
-                self.icon_dir = Path(__file__).resolve().parent / ".." / "assets" / "icons"
+                self.icon_dir = ui_root / ".." / "assets" / "icons"
+            logo_assets = ui_root / "assets"
+            if not logo_assets.exists():
+                logo_assets = ui_root / ".." / "assets"
+            logo_root = ui_root
+
+        self.logo_paths = [
+            logo_assets / "logo.png",
+            logo_assets / "logo.jpg",
+            logo_root / "logo.png",
+            logo_root / "logo.jpg",
+        ]
 
         # 0. Ribbon
         self.init_ribbon()
@@ -139,6 +153,7 @@ class MainWindow(QMainWindow):
         # 2. Content Area (Stacked Pages)
         self.stack = QStackedWidget()
         self.main_layout.addWidget(self.stack, 1)
+        self.init_footer()
 
         # Init Pages
         self.init_excel_page()
@@ -511,7 +526,7 @@ class MainWindow(QMainWindow):
         self.header = QFrame()
         self.header.setObjectName("TopBar")
         header_layout = QHBoxLayout(self.header)
-        header_layout.setContentsMargins(28, 18, 28, 18)
+        header_layout.setContentsMargins(24, 8, 24, 8)
         header_layout.setSpacing(12)
 
         brand_container = QWidget()
@@ -553,12 +568,28 @@ class MainWindow(QMainWindow):
 
         header_layout.addStretch()
 
+        self.logo_label = QLabel()
+        self.logo_label.setObjectName("LogoLabel")
+        self.logo_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.apply_logo()
+        header_layout.addWidget(self.logo_label)
+
+        self.main_layout.addWidget(self.header)
+
+    def init_footer(self):
+        self.footer = QFrame()
+        self.footer.setObjectName("FooterBar")
+        footer_layout = QHBoxLayout(self.footer)
+        footer_layout.setContentsMargins(16, 4, 16, 8)
+        footer_layout.setSpacing(8)
+        footer_layout.addStretch()
+
         self.version_label = ClickableLabel(f"v{APP_VERSION} Desktop")
         self.version_label.setObjectName("VersionLabel")
         self.version_label.clicked.connect(self.on_version_label_clicked)
-        header_layout.addWidget(self.version_label)
+        footer_layout.addWidget(self.version_label)
 
-        self.main_layout.addWidget(self.header)
+        self.main_layout.addWidget(self.footer)
 
     def change_page(self, index):
         # 0 -> Excel, 1 -> Word, 2 -> PPT. Result View is index 3 (manual jump).
@@ -921,6 +952,47 @@ class MainWindow(QMainWindow):
                           f"Version {APP_VERSION}\n"
                           "A tool for comparing Excel spreadsheets.\n\n"
                           "Developed by KEI Tools Team.")
+
+    def apply_logo(self):
+        if hasattr(self, "logo_label") and getattr(self, "logo_paths", None):
+            for logo_path in self.logo_paths:
+                if not logo_path.exists():
+                    continue
+                pix = QPixmap(str(logo_path))
+                if pix.isNull():
+                    continue
+                max_h = 90  # Target height
+                max_w = 600
+                scaled = pix.scaled(
+                    max_w,
+                    max_h,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                
+                # Composite onto white background to ensure visibility and clarity
+                # This fixes "edges lost" if it was due to transparency/rendering artifacts
+                # and satisfies "white background" request.
+                final_pix = QPixmap(scaled.size())
+                final_pix.fill(Qt.GlobalColor.white)
+                painter = QPainter(final_pix)
+                painter.drawPixmap(0, 0, scaled)
+                painter.end()
+
+                self.logo_label.setText("")
+                self.logo_label.setPixmap(final_pix)
+                self.logo_label.setProperty("placeholder", False)
+                self.logo_label.setToolTip("")
+                self.logo_label.style().unpolish(self.logo_label)
+                self.logo_label.style().polish(self.logo_label)
+                return
+        if hasattr(self, "logo_label"):
+            self.logo_label.setPixmap(QPixmap())
+            self.logo_label.setText("LOGO")
+            self.logo_label.setProperty("placeholder", True)
+            self.logo_label.setToolTip("Place logo at ui/assets/logo.png (or ui/logo.png)")
+            self.logo_label.style().unpolish(self.logo_label)
+            self.logo_label.style().polish(self.logo_label)
 
     def check_for_updates(self):
         self.start_update_check(show_prompt=True, manual=True)
@@ -1510,6 +1582,23 @@ class MainWindow(QMainWindow):
             QLabel#VersionLabel[updateAvailable="true"] {
                 color: #dc2626;
                 font-weight: 700;
+            }
+            QFrame#FooterBar {
+                background: transparent;
+            }
+            QLabel#LogoLabel {
+                min-width: 120px;
+                min-height: 40px;
+                background-color: #ffffff;
+                padding: 0px;
+                margin: 0px;
+                border: none;
+            }
+            QLabel#LogoLabel[placeholder="true"] {
+                border: 1px dashed #cbd5e1;
+                color: #94a3b8;
+                padding: 4px 8px;
+                font-size: 11px;
             }
             QLabel#PageTitle {
                 font-size: 32px;
