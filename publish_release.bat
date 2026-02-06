@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
-set PAUSE_ON_EXIT=1
+if "%PAUSE_ON_EXIT%"=="" set PAUSE_ON_EXIT=1
 set LOG_FILE=publish_release.log
 set EXITCODE=0
 echo [%date% %time%] Publish started > "%LOG_FILE%"
@@ -57,40 +57,55 @@ powershell -NoProfile -Command ^
   "$json = $obj | ConvertTo-Json -Depth 4;" ^
   "[System.IO.File]::WriteAllText('%LOCAL_RELEASE_DIR%\version.json', $json, (New-Object System.Text.UTF8Encoding($false)))"
 
+if exist "updater\Updater.exe" (
+    if not exist "%LOCAL_RELEASE_DIR%\updater" mkdir "%LOCAL_RELEASE_DIR%\updater"
+    copy /Y "updater\Updater.exe" "%LOCAL_RELEASE_DIR%\updater\" >nul
+) else (
+    call :log "WARNING: updater\\Updater.exe not found. Local release will not include updater."
+)
+
 call :log "[4/5] Checking installer..."
 set EXPECTED_INSTALLER=%INSTALLER_DIR%\DocCompareAI_Setup_v%VERSION%.exe
-if not exist "%EXPECTED_INSTALLER%" (
-    set "FOUND_INSTALLER="
-    for %%f in ("%INSTALLER_DIR%\DocCompareAI_Setup_v*.exe") do set "FOUND_INSTALLER=%%~f"
-    if defined FOUND_INSTALLER (
-        call :fail "Installer version mismatch. Found: !FOUND_INSTALLER!. Expected: %EXPECTED_INSTALLER%. Rebuild installer."
-    ) else (
-        call :fail "Installer not found. Expected: %EXPECTED_INSTALLER%. Build installer then re-run."
+if /I "%SKIP_INSTALLER_CHECK%"=="1" (
+    call :log "Skipping installer check (SKIP_INSTALLER_CHECK=1)."
+) else (
+    if not exist "%EXPECTED_INSTALLER%" (
+        set "FOUND_INSTALLER="
+        for %%f in ("%INSTALLER_DIR%\DocCompareAI_Setup_v*.exe") do set "FOUND_INSTALLER=%%~f"
+        if defined FOUND_INSTALLER (
+            call :fail "Installer version mismatch. Found: !FOUND_INSTALLER!. Expected: %EXPECTED_INSTALLER%. Rebuild installer."
+        ) else (
+            call :fail "Installer not found. Expected: %EXPECTED_INSTALLER%. Build installer then re-run."
+        )
     )
 )
 
 call :log "[5/5] Publishing to remote_root..."
-if not exist "%REMOTE_ROOT%" (
-    call :fail "remote_root not found: %REMOTE_ROOT%"
+if exist "%REMOTE_ROOT%" (
+    if not exist "%REMOTE_ROOT%\releases" mkdir "%REMOTE_ROOT%\releases"
+    if not exist "%REMOTE_ROOT%\releases\%VERSION%" mkdir "%REMOTE_ROOT%\releases\%VERSION%"
+    if not exist "%REMOTE_ROOT%\changelog" mkdir "%REMOTE_ROOT%\changelog"
+    if not exist "%REMOTE_ROOT%\installers" mkdir "%REMOTE_ROOT%\installers"
+
+    copy /Y "%LOCAL_RELEASE_DIR%\package.zip" "%REMOTE_ROOT%\releases\%VERSION%\" >nul
+    copy /Y "%LOCAL_RELEASE_DIR%\version.json" "%REMOTE_ROOT%\releases\%VERSION%\" >nul
+
+    if exist "%CHANGELOG_FILE%" copy /Y "%CHANGELOG_FILE%" "%REMOTE_ROOT%\changelog\" >nul
+    if /I not "%SKIP_INSTALLER_CHECK%"=="1" (
+        copy /Y "%EXPECTED_INSTALLER%" "%REMOTE_ROOT%\installers\" >nul
+    )
+
+    if exist "updater\Updater.exe" (
+        if not exist "%REMOTE_ROOT%\releases\%VERSION%\updater" mkdir "%REMOTE_ROOT%\releases\%VERSION%\updater"
+        copy /Y "updater\Updater.exe" "%REMOTE_ROOT%\releases\%VERSION%\updater\" >nul
+    )
+
+    echo %VERSION%> "%REMOTE_ROOT%\LATEST.txt"
+) else (
+    call :log "WARNING: remote_root not found: %REMOTE_ROOT%. Skipping remote publish."
 )
 
-if not exist "%REMOTE_ROOT%\releases" mkdir "%REMOTE_ROOT%\releases"
-if not exist "%REMOTE_ROOT%\releases\%VERSION%" mkdir "%REMOTE_ROOT%\releases\%VERSION%"
-if not exist "%REMOTE_ROOT%\changelog" mkdir "%REMOTE_ROOT%\changelog"
-if not exist "%REMOTE_ROOT%\installers" mkdir "%REMOTE_ROOT%\installers"
-
-copy /Y "%LOCAL_RELEASE_DIR%\package.zip" "%REMOTE_ROOT%\releases\%VERSION%\" >nul
-copy /Y "%LOCAL_RELEASE_DIR%\version.json" "%REMOTE_ROOT%\releases\%VERSION%\" >nul
-
-if exist "%CHANGELOG_FILE%" copy /Y "%CHANGELOG_FILE%" "%REMOTE_ROOT%\changelog\" >nul
-copy /Y "%EXPECTED_INSTALLER%" "%REMOTE_ROOT%\installers\" >nul
-
-if exist "updater\Updater.exe" (
-    if not exist "%REMOTE_ROOT%\releases\%VERSION%\updater" mkdir "%REMOTE_ROOT%\releases\%VERSION%\updater"
-    copy /Y "updater\Updater.exe" "%REMOTE_ROOT%\releases\%VERSION%\updater\" >nul
-)
-
-echo %VERSION%> "%REMOTE_ROOT%\LATEST.txt"
+echo %VERSION%> "LATEST.txt"
 
 call :log "Done. Published version %VERSION%."
 goto :end

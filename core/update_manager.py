@@ -1,13 +1,22 @@
 import json
 import os
 import re
+from pathlib import Path
 
-REMOTE_ROOT = os.environ.get(
-    "SSC_UPDATE_ROOT",
-    r"\\10.1.3.2\KEIToolsData\SpreadSheetCompare",
-)
+DEFAULT_REMOTE_ROOT = r"\\10.1.3.2\KEIToolsData\SpreadSheetCompare"
+REMOTE_ROOT = DEFAULT_REMOTE_ROOT
 
-LATEST_FILE = os.path.join(REMOTE_ROOT, "LATEST.txt")
+
+def resolve_update_root():
+    override = os.environ.get("SSC_UPDATE_ROOT")
+    if override:
+        return override
+    if os.path.exists(DEFAULT_REMOTE_ROOT):
+        return DEFAULT_REMOTE_ROOT
+    local_root = Path(__file__).resolve().parents[1]
+    if (local_root / "LATEST.txt").exists():
+        return str(local_root)
+    return DEFAULT_REMOTE_ROOT
 
 
 def _parse_version(value):
@@ -27,10 +36,12 @@ def is_newer_version(latest, current):
 
 
 def read_latest_version():
-    if not os.path.exists(LATEST_FILE):
-        return None, f"LATEST.txt not found at {LATEST_FILE}"
+    update_root = resolve_update_root()
+    latest_file = os.path.join(update_root, "LATEST.txt")
+    if not os.path.exists(latest_file):
+        return None, f"LATEST.txt not found at {latest_file}"
     try:
-        with open(LATEST_FILE, "r", encoding="utf-8-sig") as f:
+        with open(latest_file, "r", encoding="utf-8-sig") as f:
             latest = (f.read() or "").strip()
         if not latest:
             return None, "LATEST.txt is empty"
@@ -40,7 +51,8 @@ def read_latest_version():
 
 
 def read_manifest(version):
-    manifest_path = os.path.join(REMOTE_ROOT, "releases", version, "version.json")
+    update_root = resolve_update_root()
+    manifest_path = os.path.join(update_root, "releases", version, "version.json")
     if not os.path.exists(manifest_path):
         return None, f"version.json not found at {manifest_path}"
     try:
@@ -52,10 +64,11 @@ def read_manifest(version):
 
 
 def find_updater(release_dir):
+    update_root = resolve_update_root()
     candidates = [
         os.path.join(release_dir, "updater", "Updater.exe"),
         os.path.join(release_dir, "Updater.exe"),
-        os.path.join(REMOTE_ROOT, "Updater.exe"),
+        os.path.join(update_root, "Updater.exe"),
     ]
     for path in candidates:
         if os.path.exists(path):
@@ -76,7 +89,8 @@ def check_for_update(current_version):
     if not is_newer_version(manifest_version, current_version):
         return None, None
 
-    release_dir = os.path.join(REMOTE_ROOT, "releases", latest)
+    update_root = resolve_update_root()
+    release_dir = os.path.join(update_root, "releases", latest)
     return {
         "latest": latest,
         "version": manifest_version,

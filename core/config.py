@@ -35,3 +35,30 @@ def update_last_open_dir(path):
     data = load_config()
     data["last_open_dir"] = str(path)
     save_config(data)
+
+
+def get_update_prompt_on_startup(default=True):
+    data = load_config()
+    value = data.get("update_prompt_on_startup")
+    if value is None:
+        return default
+    return bool(value)
+
+
+def set_update_prompt_on_startup(value):
+    data = load_config()
+    data["update_prompt_on_startup"] = bool(value)
+    save_config(data)
+
+
+def set_pending_update(payload):
+    data = load_config()
+    data["pending_update"] = payload or {}
+    save_config(data)
+
+
+def pop_pending_update():
+    data = load_config()
+    payload = data.pop("pending_update", None)
+    save_config(data)
+    return payload

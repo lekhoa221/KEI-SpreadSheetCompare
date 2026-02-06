@@ -17,11 +17,12 @@ from PyQt6.QtWidgets import (
     QDialog,
     QTextEdit,
     QDialogButtonBox,
+    QCheckBox,
     QScrollArea,
     QSizePolicy,
 )
 from PyQt6.QtGui import QIcon, QAction, QPixmap, QPainter, QGuiApplication
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSize, QByteArray, QPropertyAnimation, QEasingCurve, QRect
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSize, QByteArray, QPropertyAnimation, QEasingCurve, QRect, QTimer
 from PyQt6.QtSvg import QSvgRenderer
 from pathlib import Path
 from ui.file_drop import FileDropWidget
@@ -34,15 +35,43 @@ import shutil
 import tempfile
 import subprocess
 from openpyxl import load_workbook
-from core.config import get_last_open_dir, update_last_open_dir
+from core.config import (
+    get_last_open_dir,
+    update_last_open_dir,
+    get_update_prompt_on_startup,
+    set_update_prompt_on_startup,
+    set_pending_update,
+    pop_pending_update,
+)
 from core.version import APP_VERSION, CURRENT_VERSION
-from core.update_manager import check_for_update, REMOTE_ROOT
+from core.update_manager import check_for_update
 from core.feedback_manager import submit_feedback
 
 # Add root to sys.path to ensure core imports work
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from excel.engine import load_excel_with_styles, compare_dataframes
+
+
+class ClickableLabel(QLabel):
+    clicked = pyqtSignal()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
+
+
+class UpdateCheckThread(QThread):
+    finished = pyqtSignal(object, object)
+
+    def __init__(self, current_version):
+        super().__init__()
+        self.current_version = current_version
+
+    def run(self):
+        info, err = check_for_update(self.current_version)
+        self.finished.emit(info, err)
 
 class WorkerThread(QThread):
     finished = pyqtSignal(object, object, object, object, object, object, object, object, object, object, object, object, object) 
@@ -129,6 +158,12 @@ class MainWindow(QMainWindow):
         # Default to Excel
         self.mode_group.button(0).setChecked(True)
         self.apply_global_styles()
+
+        self.update_info = None
+        self.update_check_thread = None
+
+        self.handle_post_update()
+        QTimer.singleShot(200, self.startup_update_check)
 
     def init_ribbon(self):
         self.ribbon = QFrame()
@@ -518,9 +553,10 @@ class MainWindow(QMainWindow):
 
         header_layout.addStretch()
 
-        version = QLabel(f"v{APP_VERSION} Desktop")
-        version.setObjectName("VersionLabel")
-        header_layout.addWidget(version)
+        self.version_label = ClickableLabel(f"v{APP_VERSION} Desktop")
+        self.version_label.setObjectName("VersionLabel")
+        self.version_label.clicked.connect(self.on_version_label_clicked)
+        header_layout.addWidget(self.version_label)
 
         self.main_layout.addWidget(self.header)
 
@@ -887,25 +923,84 @@ class MainWindow(QMainWindow):
                           "Developed by KEI Tools Team.")
 
     def check_for_updates(self):
-        self.setCursor(Qt.CursorShape.WaitCursor)
-        try:
-            info, err = check_for_update(CURRENT_VERSION)
-        finally:
+        self.start_update_check(show_prompt=True, manual=True)
+
+    def startup_update_check(self):
+        self.start_update_check(show_prompt=get_update_prompt_on_startup(), manual=False)
+
+    def start_update_check(self, show_prompt=False, manual=False):
+        if self.update_check_thread and self.update_check_thread.isRunning():
+            return
+        if manual:
+            self.setCursor(Qt.CursorShape.WaitCursor)
+        self.update_check_thread = UpdateCheckThread(CURRENT_VERSION)
+        self.update_check_thread.finished.connect(
+            lambda info, err, sp=show_prompt, man=manual: self.handle_update_result(info, err, sp, man)
+        )
+        self.update_check_thread.start()
+
+    def handle_update_result(self, info, err, show_prompt, manual):
+        if manual:
             self.setCursor(Qt.CursorShape.ArrowCursor)
 
         if err:
-            QMessageBox.warning(self, "Check for Updates", f"Unable to check updates.\n\n{err}")
+            self.update_info = None
+            self.update_version_label(status="unknown")
+            if manual:
+                QMessageBox.warning(self, "Check for Updates", f"Unable to check updates.\n\n{err}")
             return
 
         if not info:
-            QMessageBox.information(self, "Check for Updates", "You're already on the latest version.")
+            self.update_info = None
+            self.update_version_label(status="latest")
+            if manual:
+                QMessageBox.information(self, "Check for Updates", "You're already on the latest version.")
             return
 
+        self.update_info = info
+        self.update_version_label(status="update", latest_ver=info.get("version"))
+
+        if show_prompt:
+            self.show_update_prompt(info)
+
+    def update_version_label(self, status="unknown", latest_ver=None):
+        base = f"v{APP_VERSION} Desktop"
+        text = base
+
+        if status == "latest":
+            text = f"{base} • Latest"
+            self.version_label.setProperty("latest", True)
+            self.version_label.setProperty("updateAvailable", False)
+            self.version_label.setToolTip("You are on the latest version.")
+            self.version_label.setCursor(Qt.CursorShape.ArrowCursor)
+        elif status == "update":
+            suffix = f"Update {latest_ver}" if latest_ver else "Update available"
+            text = f"{base} • {suffix}"
+            self.version_label.setProperty("latest", False)
+            self.version_label.setProperty("updateAvailable", True)
+            self.version_label.setToolTip("Click to update.")
+            self.version_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        else:
+            self.version_label.setProperty("latest", False)
+            self.version_label.setProperty("updateAvailable", False)
+            self.version_label.setToolTip("Version information.")
+            self.version_label.setCursor(Qt.CursorShape.ArrowCursor)
+
+        self.version_label.setText(text)
+        self.version_label.style().unpolish(self.version_label)
+        self.version_label.style().polish(self.version_label)
+
+    def on_version_label_clicked(self):
+        if self.update_info:
+            self.show_update_prompt(self.update_info)
+        else:
+            self.start_update_check(show_prompt=True, manual=True)
+
+    def show_update_prompt(self, info):
         manifest = info.get("manifest", {})
         latest_ver = info.get("version")
         notes = (manifest.get("notes") or "No release notes.").strip()
         release_dir = info.get("release_dir")
-        updater_path = info.get("updater_path")
 
         msg = (
             f"New version {latest_ver} is available (current {CURRENT_VERSION}).\n\n"
@@ -916,10 +1011,16 @@ class MainWindow(QMainWindow):
         box = QMessageBox(self)
         box.setWindowTitle("Update Available")
         box.setText(msg)
+        checkbox = QCheckBox("Show this update prompt on startup")
+        checkbox.setChecked(get_update_prompt_on_startup())
+        box.setCheckBox(checkbox)
+
         btn_update = box.addButton("Update", QMessageBox.ButtonRole.AcceptRole)
         btn_open = box.addButton("Open Folder", QMessageBox.ButtonRole.ActionRole)
         box.addButton(QMessageBox.StandardButton.Cancel)
         box.exec()
+
+        set_update_prompt_on_startup(checkbox.isChecked())
 
         clicked = box.clickedButton()
         if clicked == btn_open:
@@ -931,6 +1032,12 @@ class MainWindow(QMainWindow):
 
         if clicked != btn_update:
             return
+
+        self.start_update_from_info(info, notes)
+
+    def start_update_from_info(self, info, notes):
+        release_dir = info.get("release_dir")
+        updater_path = info.get("updater_path")
 
         if not updater_path or not os.path.exists(updater_path):
             QMessageBox.information(
@@ -952,6 +1059,13 @@ class MainWindow(QMainWindow):
                 os.startfile(release_dir)
             return
 
+        payload = {
+            "version": info.get("version"),
+            "notes": notes,
+            "session": self.collect_session_state(),
+        }
+        set_pending_update(payload)
+
         try:
             temp_updater = os.path.join(tempfile.gettempdir(), "DocCompareAI_Updater.exe")
             shutil.copy2(updater_path, temp_updater)
@@ -959,7 +1073,73 @@ class MainWindow(QMainWindow):
             subprocess.Popen([temp_updater, release_dir, install_dir])
             QGuiApplication.instance().quit()
         except Exception as exc:
+            set_pending_update({})
             QMessageBox.warning(self, "Update Failed", f"Could not start updater.\n\n{exc}")
+
+    def collect_session_state(self):
+        return {
+            "file1_path": self.file1_path,
+            "file2_path": self.file2_path,
+            "sheet1_name": self.sheet1_name,
+            "sheet2_name": self.sheet2_name,
+            "result_view": self.stack.currentWidget() is self.result_view,
+        }
+
+    def restore_session(self, state):
+        if not state:
+            return
+
+        missing = []
+        file1 = state.get("file1_path")
+        file2 = state.get("file2_path")
+
+        if file1 and os.path.exists(file1):
+            self.drop1.process_file(file1)
+        elif file1:
+            missing.append(file1)
+
+        if file2 and os.path.exists(file2):
+            self.drop2.process_file(file2)
+        elif file2:
+            missing.append(file2)
+
+        s1 = state.get("sheet1_name")
+        s2 = state.get("sheet2_name")
+
+        if s1 and self.sheet1_combo.isEnabled():
+            self.sheet1_combo.setCurrentText(s1)
+        if s2 and self.sheet2_combo.isEnabled():
+            self.sheet2_combo.setCurrentText(s2)
+
+        if missing:
+            QMessageBox.warning(
+                self,
+                "Restore Session",
+                "Some files could not be found and were not restored:\n\n" + "\n".join(missing),
+            )
+
+        if state.get("result_view") and self.compare_btn.isEnabled():
+            QTimer.singleShot(200, self.start_comparison)
+
+    def handle_post_update(self):
+        payload = pop_pending_update()
+        if not payload:
+            return
+
+        session = payload.get("session") or {}
+        notes = (payload.get("notes") or "").strip()
+        version = payload.get("version") or APP_VERSION
+
+        def _apply():
+            if session:
+                self.restore_session(session)
+            if notes:
+                msg = f"Updated to version {version}.\n\nNotes:\n{notes}"
+            else:
+                msg = f"Updated to version {version}."
+            QMessageBox.information(self, "Update Complete", msg)
+
+        QTimer.singleShot(0, _apply)
 
     def save_feedback(self, dialog, text):
         content = (text or "").strip()
@@ -1322,6 +1502,14 @@ class MainWindow(QMainWindow):
             QLabel#VersionLabel {
                 font-size: 11px;
                 color: #94a3b8;
+            }
+            QLabel#VersionLabel[latest="true"] {
+                color: #16a34a;
+                font-weight: 700;
+            }
+            QLabel#VersionLabel[updateAvailable="true"] {
+                color: #dc2626;
+                font-weight: 700;
             }
             QLabel#PageTitle {
                 font-size: 32px;
