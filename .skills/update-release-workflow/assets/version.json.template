@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "release_date": "YYYY-MM-DD",
+  "notes": "Short release notes",
+  "package": {
+    "path": "package.zip",
+    "sha256": "<sha256-hex>",
+    "size": 12345678
+  },
+  "app_exe": "DocCompareAI.exe"
+}

@@ -1,6 +1,6 @@
 ﻿from pathlib import Path
 
-DEFAULT_VERSION = "1.0.12"
+DEFAULT_VERSION = "1.1.2"
 
 
 def _read_version():

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend UI Implementation"
+  short_description: "React Vite Tailwind UI implementation workflow"
+  default_prompt: "Use $frontend-ui-implementation to implement or review frontend UI changes in this project."

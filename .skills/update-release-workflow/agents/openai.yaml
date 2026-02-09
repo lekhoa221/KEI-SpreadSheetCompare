@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update Release Workflow"
+  short_description: "Safe LAN update release and review workflow"
+  default_prompt: "Use $update-release-workflow to implement or review the update release flow for this project."

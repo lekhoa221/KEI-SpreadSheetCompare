@@ -46,6 +46,7 @@ from core.config import (
 from core.version import APP_VERSION, CURRENT_VERSION
 from core.update_manager import check_for_update
 from core.feedback_manager import submit_feedback
+from core.utils import convert_xls_to_xlsx
 
 # Add root to sys.path to ensure core imports work
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -149,6 +150,8 @@ class MainWindow(QMainWindow):
         self.sheet1_names = []
         self.sheet2_names = []
         self.last_open_dir = get_last_open_dir()
+        self.file1_converted_path = None
+        self.file2_converted_path = None
 
         # 2. Content Area (Stacked Pages)
         self.stack = QStackedWidget()
@@ -800,19 +803,49 @@ class MainWindow(QMainWindow):
         if self.compare_btn.isEnabled():
             self.start_comparison()
 
-    # ... (set_file1, set_file2, check_ready remain similar) ...
+
     def set_file1(self, path):
-        self.file1_path = path
+        self.file1_path = path # Original path for UI
+        self.file1_converted_path = None
+        
+        path_lower = path.lower()
+        if path_lower.endswith(".xls") and not path_lower.endswith(".xlsx"):
+            # Attempt convert
+            converted = convert_xls_to_xlsx(path)
+            if converted:
+                self.file1_converted_path = converted
+                # Use converted path for processing/loading sheets
+                # But keep original path for display in UI
+            else:
+                 QMessageBox.warning(self, "Format Warning", 
+                                   "This is a legacy .xls file and requires 'xlrd' to process.\n"
+                                   "Values will be compared, but some styles/formulas might be lost during conversion.")
+        
         self.update_last_dir(path)
-        self.populate_sheet_combo(self.sheet1_combo, path, is_left=True)
+        # Use converted path for internal processing if available
+        proc_path = self.file1_converted_path if self.file1_converted_path else path
+        self.populate_sheet_combo(self.sheet1_combo, proc_path, is_left=True)
         self.check_ready()
 
     def set_file2(self, path):
-        self.file2_path = path
-        self.update_last_dir(path)
-        self.populate_sheet_combo(self.sheet2_combo, path, is_left=False)
-        self.check_ready()
+        self.file2_path = path # Original path for UI
+        self.file2_converted_path = None
+        
+        path_lower = path.lower()
+        if path_lower.endswith(".xls") and not path_lower.endswith(".xlsx"):
+            converted = convert_xls_to_xlsx(path)
+            if converted:
+                self.file2_converted_path = converted
+            else:
+                 QMessageBox.warning(self, "Format Warning", 
+                                   "This is a legacy .xls file and requires 'xlrd' to process.\n"
+                                   "Values will be compared, but some styles/formulas might be lost during conversion.")
 
+        self.update_last_dir(path)
+        proc_path = self.file2_converted_path if self.file2_converted_path else path
+        self.populate_sheet_combo(self.sheet2_combo, proc_path, is_left=False)
+        self.check_ready()
+        
     def check_ready(self):
         if self.file1_path and self.file2_path and self.sheet1_name and self.sheet2_name:
             self.compare_btn.setEnabled(True)
@@ -822,20 +855,19 @@ class MainWindow(QMainWindow):
             self.compare_btn.setEnabled(False)
             self.compare_btn.setText("Compare Now")
             self.helper_label.setText("Select two files to compare.")
-            
+
     def start_comparison(self):
-        self.compare_btn.setText("Analyzing...")
-        self.compare_btn.setEnabled(False)
-        if self.stack.currentWidget() is self.result_view:
-            self.result_view.status_info.setText("Loading...")
-            QGuiApplication.processEvents()
+        # ... (UI updates) ...
+        f1 = self.file1_converted_path if self.file1_converted_path else self.file1_path
+        f2 = self.file2_converted_path if self.file2_converted_path else self.file2_path
+        
         self.result_view.set_loading(True)
         
-        self.worker = WorkerThread(self.file1_path, self.file2_path, self.sheet1_name, self.sheet2_name)
+        self.worker = WorkerThread(f1, f2, self.sheet1_name, self.sheet2_name)
         self.worker.finished.connect(self.on_comparison_finished)
         self.worker.error.connect(self.on_error)
         self.worker.start()
-
+        
     def on_comparison_finished(self, df1, df2, s1, s2, m1, m2, f1, f2, cw1, rh1, cw2, rh2, result):
         # When finished, we jump to Result View
         # Result View works with data, so we populate it
@@ -947,11 +979,18 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def show_about_dialog(self):
-        QMessageBox.about(self, "About SpreadSheet Compare",
-                          "SpreadSheet Compare\n\n"
-                          f"Version {APP_VERSION}\n"
-                          "A tool for comparing Excel spreadsheets.\n\n"
-                          "Developed by KEI Tools Team.")
+        self.show_author_info()
+
+    def show_author_info(self):
+        title = "About DocCompare AI"
+        text = (
+            f"<b>DocCompare AI v{APP_VERSION}</b><br><br>"
+            "Created by: <b>KEI AI Solutions</b><br>"
+            "Contact: <b>Khoa.Le</b><br><br>"
+            "This tool is free to use. No license required.<br>"
+            "Sharing and feedback are welcome!"
+        )
+        QMessageBox.about(self, title, text)
 
     def apply_logo(self):
         if hasattr(self, "logo_label") and getattr(self, "logo_paths", None):
@@ -1020,6 +1059,10 @@ class MainWindow(QMainWindow):
             self.update_version_label(status="unknown")
             if manual:
                 QMessageBox.warning(self, "Check for Updates", f"Unable to check updates.\n\n{err}")
+            else:
+                 # Startup check failed -> possibly no server access
+                 # As requested: show author info dialog only in this case
+                 self.show_author_info()
             return
 
         if not info:

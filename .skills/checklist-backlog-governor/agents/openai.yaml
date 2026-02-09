@@ -1,0 +1,4 @@
+interface:
+  display_name: "Checklist Backlog Governor"
+  short_description: "Governs checklist and backlog task flow"
+  default_prompt: "Use $checklist-backlog-governor to enforce the checklist and backlog workflow for this project."

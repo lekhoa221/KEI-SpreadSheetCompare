@@ -1,0 +1,4 @@
+interface:
+  display_name: "Desktop Pyqt UI Implementation"
+  short_description: "PyQt desktop UI implementation and review flow"
+  default_prompt: "Use $desktop-pyqt-ui-implementation to implement or review desktop UI changes in this project."

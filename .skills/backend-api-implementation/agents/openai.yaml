@@ -1,0 +1,4 @@
+interface:
+  display_name: "Backend API Implementation"
+  short_description: "FastAPI endpoint implementation and review flow"
+  default_prompt: "Use $backend-api-implementation to implement or review backend API changes in this project."

@@ -15,7 +15,7 @@ AppId={#MyAppId}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-DefaultDirName={autopf}\{#MyAppName}
+DefaultDirName={autopf}\KEI\{#MyAppName}
 DefaultGroupName={#MyAppName}
 ; Where to save the installer file
 OutputDir=installer

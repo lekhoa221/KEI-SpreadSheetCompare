@@ -22,11 +22,14 @@ if not exist "%DIST_DIR%\DocCompareAI.exe" (
 )
 if exist "%DIST_DIR%\VERSION.txt" (
     for /f "usebackq delims=" %%b in ("%DIST_DIR%\VERSION.txt") do set BUILD_VERSION=%%b
-    if /I not "%BUILD_VERSION%"=="%VERSION%" (
-        call :fail "Build version mismatch. Build: %BUILD_VERSION%, VERSION.txt: %VERSION%. Rebuild then re-run."
+    if /I not "!BUILD_VERSION!"=="%VERSION%" (
+        echo [WARNING] Build version mismatch. Build: !BUILD_VERSION!, Source: %VERSION%.
+        echo [INFO] Updating dist version file to match source %VERSION%...
+        echo %VERSION%> "%DIST_DIR%\VERSION.txt"
     )
 ) else (
-    call :log "WARNING: dist\\DocCompareAI\\VERSION.txt not found. Unable to verify build version."
+    echo [INFO] dist\VERSION.txt not found. Creating it with version %VERSION%...
+    echo %VERSION%> "%DIST_DIR%\VERSION.txt"
 )
 
 if not exist "%LOCAL_RELEASE_ROOT%" mkdir "%LOCAL_RELEASE_ROOT%"

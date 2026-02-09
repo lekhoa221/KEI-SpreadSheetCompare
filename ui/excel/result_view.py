@@ -182,6 +182,8 @@ class ResultView(QWidget):
         self.grid1 = QTableWidget()
         self.grid1.setItemDelegate(BorderDelegate(self.grid1))
         self.grid1.setWordWrap(False)
+        self.grid1.verticalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.grid1.verticalHeader().setFixedWidth(40)
 
         self.grid1_header.addWidget(self.grid1_label)
         self.grid1_header.addWidget(self.grid1_sheet_btn)
@@ -223,6 +225,8 @@ class ResultView(QWidget):
         self.grid2 = QTableWidget()
         self.grid2.setItemDelegate(BorderDelegate(self.grid2))
         self.grid2.setWordWrap(False)
+        self.grid2.verticalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.grid2.verticalHeader().setFixedWidth(40)
 
         self.grid2_header.addWidget(self.grid2_label)
         self.grid2_header.addWidget(self.grid2_sheet_btn)

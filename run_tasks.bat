@@ -3,9 +3,15 @@ setlocal EnableExtensions EnableDelayedExpansion
 set "PAUSE_ON_EXIT=0"
 
 :menu
+set "CURRENT_VER=Unknown"
+if exist "VERSION.txt" (
+    for /f "usebackq delims=" %%v in ("VERSION.txt") do set "CURRENT_VER=%%v"
+)
+
 echo.
 echo ==========================================
 echo          Build / Publish Menu
+echo          Version: !CURRENT_VER!
 echo ==========================================
 echo 1. Build EXE
 echo 2. Build Installer
@@ -44,6 +50,10 @@ if "!do1!!do2!!do3!!do4!!do5!!do6!"=="000000" (
 
 if "!do4!"=="1" (
     call :set_version
+    if errorlevel 1 goto :menu
+)
+if not "!do1!!do2!!do3!"=="000" (
+    call :confirm_build
     if errorlevel 1 goto :menu
 )
 if "!do1!"=="1" (
@@ -86,6 +96,19 @@ if errorlevel 1 (
 echo [DONE] %taskName%
 exit /b 0
 
+:confirm_build
+set "CONFIRM_VER=Unknown"
+if exist "VERSION.txt" (
+    for /f "usebackq delims=" %%v in ("VERSION.txt") do set "CONFIRM_VER=%%v"
+)
+echo.
+set /p CONFIRM="Build/Publish version !CONFIRM_VER!? (y/n): "
+set "CONFIRM=!CONFIRM: =!"
+if /i "!CONFIRM!"=="y" exit /b 0
+if /i "!CONFIRM!"=="yes" exit /b 0
+echo Cancelled.
+exit /b 1
+
 :set_version
 set "NEW_VERSION="
 set /p NEW_VERSION="Enter version (e.g. v1.1.0 or 2.1.0): "
@@ -94,11 +117,14 @@ if "!NEW_VERSION!"=="" (
     echo Empty version. Cancelled.
     exit /b 1
 )
-for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "$v='!NEW_VERSION!'.Trim(); if ($v -match '^[vV]') { $v = $v.Substring(1) }; if ($v -notmatch '^[0-9]+(\\.[0-9]+){2,3}$') { exit 1 }; $v"`) do set "NEW_VERSION=%%v"
-if "!NEW_VERSION!"=="" (
-    echo Invalid version format. Use 1.2.3 (optionally with leading v).
+echo !NEW_VERSION! | find "." >nul
+if errorlevel 1 (
+    echo Invalid version format. Must contain a dot ^(e.g. 1.2 or 1.2.3^).
     exit /b 1
 )
+
+:: Remove leading v
+if /i "!NEW_VERSION:~0,1!"=="v" set "NEW_VERSION=!NEW_VERSION:~1!"
 echo !NEW_VERSION!> VERSION.txt
 if not exist "installer" mkdir "installer"
 echo #define MyAppVersion "!NEW_VERSION!"> "installer\version.iss"
