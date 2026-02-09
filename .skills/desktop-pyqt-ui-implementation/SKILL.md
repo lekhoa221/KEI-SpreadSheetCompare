@@ -1,114 +1,99 @@
 ---
 name: desktop-pyqt-ui-implementation
 description: |
-  Trien khai va review desktop UI PyQt cho project Spreadsheet Compare theo quy trinh ro rang (startup flow, main window layout, result grid interaction, signal-slot wiring, verification). Dung khi nguoi dung yeu cau tao moi/sua/refactor/review giao dien desktop trong `ui/` hoac `desktop_app.py`, xu ly responsiveness cua widget, hoac toi uu luong thao tac ma khong pha vo logic hien tai. Khong dung cho frontend React, backend API, hoac release deployment workflow.
+  (EN) Implement and review desktop PyQt UI for the Spreadsheet Compare project according to a clear workflow (startup flow, main window layout, result grid interaction, signal-slot wiring, verification). Use when users request to create/edit/refactor/review the desktop interface in `ui/` or `desktop_app.py`, handle widget responsiveness, or optimize operation flow without breaking existing logic. Not for React frontend, backend API, or release deployment workflow. 
+  (VI) Triển khai và review giao diện desktop PyQt cho project Spreadsheet Compare theo quy trình rõ ràng (luồng khởi chạy, layout cửa sổ chính, tương tác lưới kết quả, kết nối signal-slot, kiểm chứng). Dùng khi người dùng yêu cầu tạo mới/sửa/refactor/review giao diện desktop trong `ui/` hoặc `desktop_app.py`, xử lý tính linh hoạt của widget, hoặc tối ưu luồng thao tác mà không phá vỡ logic hiện tại. Không dùng cho React frontend, backend API, hoặc quy trình phát hành (release deployment).
 ---
 
 # Desktop PyQt UI Implementation
 
-### Muc dich cua skill
+### Purpose of the Skill
 
-- Muc tieu chinh cua skill nay la chuyen yeu cau giao dien desktop thanh thay doi PyQt co cau truc ro rang, de test, va de maintain.
-- Skill giup giam loi thao tac UI, giam regressions o luong compare, va giu code nhat quan giua `desktop_app.py`, `ui/main_window.py`, va `ui/excel/result_view.py`.
+* The primary objective is to transform desktop interface requirements into structured, testable, and maintainable PyQt code.
+* The skill helps reduce UI operation errors, prevent regressions in comparison flows, and maintain code consistency between `desktop_app.py`, `ui/main_window.py`, and `ui/excel/result_view.py`.
 
-### Khi nao dung skill nay?
+### When to Use This Skill?
 
-- Dieu kien 1: Khi nguoi dung yeu cau tao widget moi, sua layout, refactor signal-slot, hoac review giao dien desktop.
-- Dieu kien 2: Khi pham vi task nam trong `desktop_app.py`, `ui/`, hoac cac module core duoc desktop UI goi truc tiep.
-- Khong dung: Khi task thuoc frontend React, backend FastAPI, hoac luong publish update release.
+* **Condition 1:** When the user requests to create new widgets, modify layouts, refactor signal-slot connections, or review the desktop interface.
+* **Condition 2:** When the task scope resides within `desktop_app.py`, the `ui/` folder, or core modules directly invoked by the desktop UI.
+* **Do Not Use:** When the task involves the React frontend, FastAPI backend, or the publish/update release workflow.
 
-### Quy trinh hoat dong (step-by-step)
+### Operational Workflow (Step-by-Step)
 
-1. **Phan tich yeu cau**
-   - Xac dinh yeu cau la:
-     - [ ] Tao moi
-     - [ ] Sua / refactor
-     - [ ] Review / kiem tra
-     - [ ] Khac
-   - Lam ro scope: startup, dashboard, upload flow, compare flow, result view, hoac feedback and update prompt.
-   - Doc context toi thieu:
-     - `desktop_app.py`
-     - `ui/main_window.py`
-     - `ui/file_drop.py`
-     - `ui/excel/result_view.py`
+1.  **Requirement Analysis**
+    * Identify the request type:
+        * [ ] Create New
+        * [ ] Modify / Refactor
+        * [ ] Review / Verify
+        * [ ] Other
+    * Clarify the scope: Startup sequence, dashboard, upload flow, comparison flow, result view, or feedback/update prompts.
+    * Read minimum context files: `desktop_app.py`, `ui/main_window.py`, `ui/file_drop.py`, and `ui/excel/result_view.py`.
 
-2. **Chuan bi / dieu kien**
-   - Xac dinh stack:
-     - PyQt6 widgets + signal and slot
-     - qdarktheme light theme
-     - WorkerThread cho tac vu nang de tranh block UI thread
-   - Chay preflight:
-     - `powershell -ExecutionPolicy Bypass -File .skills/desktop-pyqt-ui-implementation/scripts/preflight_desktop_ui.ps1 -ProjectRoot .`
-   - Neu can verify chat che:
-     - `powershell -ExecutionPolicy Bypass -File .skills/desktop-pyqt-ui-implementation/scripts/preflight_desktop_ui.ps1 -ProjectRoot . -VerifyQtImports -RunCompile`
+2.  **Preparation / Conditions**
+    * Confirm the tech stack:
+        * PyQt6 Widgets + Signal/Slot mechanism.
+        * `qdarktheme` (light theme).
+        * `WorkerThread` for heavy tasks to avoid blocking the UI thread.
+    * Run preflight check:
+        * `powershell -ExecutionPolicy Bypass -File .skills/desktop-pyqt-ui-implementation/scripts/preflight_desktop_ui.ps1 -ProjectRoot .`
+    * For strict verification:
+        * `powershell -ExecutionPolicy Bypass -File .skills/desktop-pyqt-ui-implementation/scripts/preflight_desktop_ui.ps1 -ProjectRoot . -VerifyQtImports -RunCompile`
 
-3. **Thuc hien tac vu chinh**
-   - Tuan thu quy tac trong `references/guideline.md`.
-   - Neu tao widget moi:
-     - Dung template `assets/pyqt-widget-template.py`.
-   - Uu tien thay doi toi thieu can thiet, giu hanh vi hien tai va contract signal.
-   - Neu can chay thu nhanh:
-     - `run_desktop.bat`
+3.  **Core Tasks Execution**
+    * Adhere to the rules in `references/guideline.md`.
+    * When creating new widgets: Use `assets/pyqt-widget-template.py` as a base.
+    * Prioritize minimal necessary changes; maintain existing behaviors and signal contracts.
+    * For quick testing: Use `run_desktop.bat`.
 
-4. **Kiem tra / toi uu**
-   - Dung checklist trong `references/checklist.md`.
-   - Kiem tra:
-     - loading and error states
-     - responsiveness khi resize window
-     - dong bo state giua MainWindow va ResultView
-     - khong co long-running task trong main thread.
+4.  **Verification / Optimization**
+    * Use the checklist in `references/checklist.md`.
+    * **Mandatory Checks:**
+        * Loading and error states.
+        * Responsiveness during window resizing.
+        * State synchronization between `MainWindow` and `ResultView`.
+        * Ensure no long-running tasks are executed in the main thread.
 
-### Cac quy tac bat buoc (hard rules)
+---
 
-- [ ] Frontmatter chi gom `name` va `description`.
-- [ ] Khong block UI thread bang thao tac nang; phai dung QThread hoac co che async phu hop.
-- [ ] Khong pha vo luong signal-slot hien tai neu khong co yeu cau ro rang.
-- [ ] Khong doi path loading asset cho bundle mode (ho tro `sys._MEIPASS`) neu chua duoc yeu cau.
-- [ ] Khong sua backend API hay frontend React trong task desktop UI neu khong duoc chi dinh.
-- [ ] Khong them dependency moi neu stack hien tai dap ung.
-- [ ] Them comment ngan gon cho logic phuc tap (sync selection, filter, formula parsing, update flow).
+### Hard Rules
 
-### Cac quy tac khuyen nghi (soft rules)
+* [ ] Frontmatter must only contain `name` and `description`.
+* [ ] **Never block the UI thread** with heavy operations; use `QThread` or appropriate async mechanisms.
+* [ ] Do not break existing signal-slot flows unless explicitly requested.
+* [ ] Do not change asset loading paths for bundle mode (supporting `sys._MEIPASS`) unless required.
+* [ ] Do not modify backend APIs or React frontend code during a desktop UI task unless specified.
+* [ ] Do not add new dependencies if the current stack suffices.
+* [ ] Add concise comments for complex logic (selection sync, filtering, formula parsing, update flow).
 
-- [ ] Uu tien tach ham nho trong MainWindow and ResultView de de review.
-- [ ] Uu tien naming ro nghia cho widget, action, va signal.
-- [ ] Uu tien cap nhat style qua objectName va central stylesheet thay vi style inline qua nhieu.
-- [ ] Uu tien fail-safe UI: loi phai co thong bao ro rang cho user.
+### Soft Rules (Recommendations)
 
-### Cach goi skill (cho nguoi dung)
+* [ ] Prioritize breaking down `MainWindow` and `ResultView` into smaller functions for easier review.
+* [ ] Use meaningful naming conventions for widgets, actions, and signals.
+* [ ] Prioritize styling via `objectName` and a central stylesheet over excessive inline styling.
+* [ ] Implement **fail-safe UI**: errors must provide clear notifications to the user.
 
-- **Implicit (tu dong):**
-  - "Ap dung skill nay de sua giao dien desktop PyQt cho man hinh ket qua."
-  - "Review `ui/main_window.py` theo guideline cua skill."
-  - "Refactor signal-slot cua ResultView de de bao tri hon."
+---
 
-- **Explicit (buoc dung skill):**
-  - `/skills` -> chon `desktop-pyqt-ui-implementation`
-  - `$desktop-pyqt-ui-implementation`
-  - `codex skill desktop-pyqt-ui-implementation`
+### How to Invoke the Skill (For Users)
 
-### Cac tai nguyen phu thuoc
+* **Implicit (Automatic):**
+    * "Apply this skill to fix the PyQt desktop interface for the results screen."
+    * "Review `ui/main_window.py` according to the skill guidelines."
+    * "Refactor the ResultView signal-slot connections for better maintainability."
+* **Explicit (Forced usage):**
+    * `/skills` -> select `desktop-pyqt-ui-implementation`
+    * `$desktop-pyqt-ui-implementation`
 
-- Scripts:
-  - `scripts/preflight_desktop_ui.ps1` - preflight check truoc khi sua hoac review desktop UI.
+### Dependencies
 
-- Tai lieu tham khao:
-  - `references/guideline.md` - guideline desktop PyQt implementation.
-  - `references/checklist.md` - checklist review and verification.
+* **Scripts:** `scripts/preflight_desktop_ui.ps1` (verifies conditions before modification/review).
+* **Reference Documents:**
+    * `references/guideline.md` (PyQt implementation guidelines).
+    * `references/checklist.md` (Review and verification checklist).
+* **Templates:** `assets/pyqt-widget-template.py` (Widget framework with loading/error state).
 
-- Template:
-  - `assets/pyqt-widget-template.py` - khung widget PyQt voi loading and error state.
+### Implementation Notes for Devs
 
-### Ghi chu trien khai cho dev
-
-- Ten skill:
-  - `name` dung chu thuong + so + dau gach ngang.
-  - Ten folder trung voi gia tri `name`.
-
-- Gioi han:
-  - `description` ngan gon, ro trigger, uu tien duoi 1024 ky tu.
-  - `SKILL.md` giu gon, uu tien duoi 500 dong; noi dung chi tiet dua sang `references/`.
-
-- Progressive disclosure:
-  - Chi load `references/guideline.md` va `references/checklist.md` khi can.
-  - Khong lap lai noi dung dai dong giua `SKILL.md` va references.
+* **Skill Name:** `name` must use lowercase + numbers + hyphens. Folder name must match the `name`.
+* **Constraints:** `description` should be concise, clear about triggers, and under 1024 characters. Keep `SKILL.md` under 500 lines.
+* **Progressive Disclosure:** Only load reference files when necessary to avoid information overload.

@@ -1,96 +1,103 @@
 ---
 name: update-release-workflow
-description: Chuẩn hóa, triển khai, và review luồng update release an toàn cho ứng dụng desktop Python trong LAN (build, package.zip, version.json, publish, LATEST.txt, updater). Dùng khi người dùng yêu cầu tạo mới/sửa/refactor/review quy trình cập nhật, xử lý mismatch version/hash, hoặc thiết lập checklist phát hành. Không dùng cho cloud deployment, CI/CD internet-first, hoặc yêu cầu không liên quan đến update lifecycle.
+description: |
+  (EN) Standardize, implement, and review secure update release flows for Python desktop applications in a LAN environment (build, package.zip, version.json, publish, LATEST.txt, updater). Use for managing version/hash mismatches, rollback procedures, or release checklists. Not for cloud/internet-first CI/CD or non-release tasks.
+  (VI) Chuẩn hóa, triển khai, và review luồng update release an toàn cho ứng dụng desktop Python trong LAN (build, package.zip, version.json, publish, LATEST.txt, updater). Dùng khi người dùng yêu cầu tạo mới/sửa/refactor/review quy trình cập nhật, xử lý mismatch version/hash, hoặc thiết lập checklist phát hành. Không dùng cho cloud deployment, CI/CD internet-first.
 ---
 
 # Update Release Workflow
 
-### Muc dich cua skill
+### Purpose of the Skill
 
-* **Mục tiêu chính** của skill này là biến yêu cầu "cập nhật phiên bản" thành quy trình release có kiểm soát và có thể lặp lại.
-* Skill giúp **giảm lỗi publish**, đồng bộ version nhất quán, và rút ngắn thời gian release thông qua checklist + script preflight.
+* The primary objective is to transform "update version" requests into a controlled, repeatable release process.
+* The skill helps **minimize publishing errors**, ensures consistent versioning, and shortens release cycles through standardized checklists and preflight scripts.
 
-### Khi nao dung skill nay?
+### When to Use This Skill?
 
-* **Điều kiện 1:** Khi người dùng yêu cầu tạo mới/sửa/review luồng update, phát hành version, rollback, hoặc kiểm tra lỗi cập nhật.
-* **Điều kiện 2:** Khi project là ứng dụng desktop Python (PyInstaller) phát hành qua share LAN với `LATEST.txt` + `releases/<version>/`.
-* **Không dùng:** Khi bài toán thuộc cloud deployment, container orchestration, mobile OTA, hoặc yêu cầu mơ hồ không liên quan release/update.
+* **Condition 1:** When the user requests to create, modify, or review update flows, version releases, rollbacks, or update error debugging.
+* **Condition 2:** When the project is a Python desktop application (PyInstaller) distributed via LAN shares using `LATEST.txt` and a `releases/<version>/` structure.
+* **Do Not Use:** For cloud deployments, container orchestration, mobile OTA updates, or vague requests unrelated to the release lifecycle.
 
-### Quy trinh hoat dong (step-by-step)
+### Operational Workflow (Step-by-Step)
 
-1.  **Phân tích yêu cầu**
-    * Xác định yêu cầu là:
-        * [ ] Tạo mới
-        * [ ] Sửa / refactor
-        * [ ] Review / kiểm tra
-        * [ ] Khác
-    * Xác định phạm vi tác động: script build/publish, updater, tài liệu release, hay chỉ checklist.
-    * Đọc nhanh các file context chính: `VERSION.txt`, `publish_release.bat`, `build_app.bat`, `core/update_manager.py`, `docs/UPDATE_WORKFLOW.md`.
+1.  **Requirement Analysis**
+    * Identify the request type:
+        * [ ] Create New
+        * [ ] Modify / Refactor
+        * [ ] Review / Verify
+        * [ ] Other
+    * Determine the impact scope: build/publish scripts, updater logic, release documentation, or just the checklist.
+    * Read minimum context files: `VERSION.txt`, `publish_release.bat`, `build_app.bat`, `core/update_manager.py`, and `docs/UPDATE_WORKFLOW.md`.
 
-2.  **Chuẩn bị / điều kiện**
-    * Xác định stack và môi trường:
-        * Python + PyInstaller
-        * Batch/PowerShell trên Windows
-        * LAN share root (`REMOTE_ROOT`) và local release root (`releases/`)
-    * Chạy preflight trước khi publish:
-        * `powershell -ExecutionPolicy Bypass -File .skills/update-release-workflow/scripts/preflight_update.ps1 -ProjectRoot .`
-    * Nếu release chính thức cần installer:
-        * `powershell -ExecutionPolicy Bypass -File .skills/update-release-workflow/scripts/preflight_update.ps1 -ProjectRoot . -RequireInstaller`
+2.  **Preparation / Conditions**
+    * Confirm the environment and tech stack:
+        * Python + PyInstaller.
+        * Batch/PowerShell on Windows.
+        * LAN share root (`REMOTE_ROOT`) and local release root (`releases/`).
+    * Run preflight check before publishing:
+      `powershell -ExecutionPolicy Bypass -File .skills/update-release-workflow/scripts/preflight_update.ps1 -ProjectRoot .`
+    * If the release requires a formal installer:
+      `powershell -ExecutionPolicy Bypass -File .skills/update-release-workflow/scripts/preflight_update.ps1 -ProjectRoot . -RequireInstaller`
 
-3.  **Thực hiện tác vụ chính**
-    * Tuân thủ release protocol trong `references/guideline.md`.
-    * **Full release:**
-        * Chạy `build_app.bat`
-        * Chạy `build_installer.bat` (nếu cần installer)
-        * Chạy `publish_release.bat`
-    * **Quick local update test:** Làm theo `docs/quick_update_test.md` để test nhanh không bị build loop.
-    * Nếu cần tạo file mới: Dùng template `assets/version.json.template` cho manifest.
-    * Nếu cần review: Dùng checklist trong `references/checklist.md` và đánh dấu từng mục pass/fail.
+3.  **Core Tasks Execution**
+    * Adhere to the release protocol in `references/guideline.md`.
+    * **Full Release Sequence:**
+        1. Run `build_app.bat`
+        2. Run `build_installer.bat` (if applicable)
+        3. Run `publish_release.bat`
+    * **Quick Local Update Test:** Follow `docs/quick_update_test.md` for rapid testing without full rebuild loops.
+    * If creating new manifests: Use `assets/version.json.template`.
+    * For reviews: Use the checklist in `references/checklist.md` and mark items as pass/fail.
 
-4.  **Kiểm tra / tối ưu**
-    * Kiểm tra tính nhất quán version (`VERSION.txt`, `dist/DocCompareAI/VERSION.txt`, `version.json`).
-    * Kiểm tra hash và package metadata trong `version.json`.
-    * Kiểm tra sequencing publish để tránh "bản cập nhật lỗi": **Upload `package.zip` + `version.json` + updater xong mới đổi `LATEST.txt`**.
-    * Đề xuất cải tiến nếu thấy anti-pattern, không sửa bừa các file nhạy cảm.
+4.  **Verification / Optimization**
+    * Ensure version consistency across `VERSION.txt`, `dist/AppName/VERSION.txt`, and `version.json`.
+    * Verify file hashes and package metadata in `version.json`.
+    * **Crucial Sequencing:** Upload `package.zip` + `version.json` + updater files **before** updating `LATEST.txt` to prevent "partial update" errors.
+    * Propose improvements if anti-patterns are detected, but do not modify sensitive config files without explicit approval.
 
-### Cac quy tac bat buoc (hard rules)
 
-* [ ] Frontmatter chỉ gồm `name` và `description`; không thêm metadata khác trong `SKILL.md`.
-* [ ] Sử dụng một nguồn version chính là `VERSION.txt`; mọi điểm sử dụng version khác phải đồng bộ.
-* [ ] `LATEST.txt` phải cập nhật **CUỐI CÙNG** trong quy trình publish.
-* [ ] Nếu dùng `package.zip`, `version.json.package.sha256` và `size` là bắt buộc.
-* [ ] Không thay đổi file config quan trọng (`setup.iss`, `installer/version.iss`, biến đường dẫn release root) nếu không được yêu cầu rõ ràng.
-* [ ] Không thêm dependency mới nếu không có lý do kỹ thuật bắt buộc.
-* [ ] Thêm comment ngắn gọn cho logic phức tạp/nhạy cảm (version parse, rollback, copy/retry).
 
-### Cac quy tac khuyen nghi (soft rules)
+---
 
-* [ ] Ưu tiên giữ logic update thành các hàm nhỏ, dễ test và dễ rollback.
-* [ ] Ưu tiên dùng script có sẵn (`build_app.bat`, `publish_release.bat`, `scripts/preflight_update.ps1`) thay vì viết lại thủ công.
-* [ ] Ưu tiên **fail-fast**: phát hiện mismatch version/hash sớm trước khi copy lên remote.
-* [ ] Ưu tiên **idempotent update**: có thể chạy lại publish script mà không phá release đã tồn tại.
+### Hard Rules
 
-### Cach goi skill (cho nguoi dung)
+* [ ] Frontmatter must only contain `name` and `description`.
+* [ ] **Single Source of Truth:** Use `VERSION.txt` as the primary version reference; all other version points must synchronize with it.
+* [ ] **`LATEST.txt` Update:** This must be the **final step** in the publishing process.
+* [ ] **Integrity Checks:** If using `package.zip`, both `sha256` and `size` in `version.json` are mandatory.
+* [ ] Do not modify critical configuration files (`setup.iss`, `installer/version.iss`, release root paths) unless explicitly requested.
+* [ ] Do not introduce new dependencies unless there is a mandatory technical requirement.
+* [ ] Add concise comments for complex logic (version parsing, rollback mechanisms, copy-retry loops).
 
-* **Implicit (tự động):**
-    * "Áp dụng skill này để chuẩn hóa quy trình publish update LAN."
-    * "Review luồng update hiện tại và tạo checklist trước release."
-    * "Sửa script publish để an toàn hơn với `LATEST.txt`."
-* **Explicit (bắt buộc dùng skill):**
-    * `/skills` -> chọn `update-release-workflow`
+### Soft Rules (Recommendations)
+
+* [ ] Prioritize modularizing update logic into small, testable, and reversible functions.
+* [ ] Use existing scripts (`build_app.bat`, `publish_release.bat`) rather than manual CLI commands.
+* [ ] **Fail-fast:** Detect version/hash mismatches locally before attempting to copy to the remote LAN share.
+* [ ] **Idempotent Updates:** Ensure the publishing script can be re-run without breaking an existing release.
+
+---
+
+### How to Invoke the Skill (For Users)
+
+* **Implicit (Automatic):**
+    * "Apply this skill to standardize the LAN update publishing process."
+    * "Review the current update flow and create a pre-release checklist."
+    * "Modify the publish script to safely update `LATEST.txt`."
+* **Explicit (Forced usage):**
+    * `/skills` -> select `update-release-workflow`
     * `$update-release-workflow`
-    * `codex skill update-release-workflow`
 
-### Cac tai nguyen phu thuoc
+### Dependencies
 
-* **Scripts:** `scripts/preflight_update.ps1` (kiểm tra trước build/publish).
-* **Tài liệu tham khảo:**
-    * `references/guideline.md` (release/update guideline cho LAN workflow).
-    * `references/checklist.md` (checklist pre-release, post-release, rollback).
-* **Template:** `assets/version.json.template` (manifest mẫu để khởi tạo nhanh version metadata).
+* **Scripts:** `scripts/preflight_update.ps1` (pre-build/publish verification).
+* **Reference Documents:**
+    * `references/guideline.md` (LAN-specific release/update guidelines).
+    * `references/checklist.md` (Pre-release, post-release, and rollback checklists).
+* **Templates:** `assets/version.json.template` (JSON manifest for version metadata).
 
-### Ghi chu trien khai cho dev
+### Implementation Notes for Devs
 
-* **Tên skill:** `name` dùng chữ thường + số + dấu gạch ngang (`-`), không bắt đầu/kết thúc bằng `-`, không có `--`. Tên folder phải trùng với giá trị `name`.
-* **Giới hạn:** `description` ngắn gọn, đầy đủ trigger, ưu tiên dưới 1024 ký tự. Giữ `SKILL.md` gọn, ưu tiên dưới 500 dòng; nội dung chi tiết đưa sang `references/`.
-* **Progressive disclosure:** Chỉ load `references/guideline.md` và `references/checklist.md` khi cần. Không nhân bản thông tin dài dòng giữa `SKILL.md` và reference files.
+* **Skill Name:** `name` must be lowercase + numbers + hyphens. Folder name must match.
+* **Constraints:** Keep `description` under 1024 characters. Keep `SKILL.md` focused on the workflow; move detailed documentation to `references/`.
+* **Progressive Disclosure:** Only load reference files when strictly necessary to manage context window efficiency.
