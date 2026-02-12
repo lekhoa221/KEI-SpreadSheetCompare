@@ -101,3 +101,14 @@ description: |
 * **Skill Name:** `name` must be lowercase + numbers + hyphens. Folder name must match.
 * **Constraints:** Keep `description` under 1024 characters. Keep `SKILL.md` focused on the workflow; move detailed documentation to `references/`.
 * **Progressive Disclosure:** Only load reference files when strictly necessary to manage context window efficiency.
+
+---
+
+### Standardized Self-Test
+
+* Probe token: `SKILL_PROBE_UPDATE_RELEASE_WORKFLOW`
+* Expected canary first line: `CANARY_UPDATE_RELEASE_WORKFLOW_OK_20260210`
+* Command:
+  * `powershell -ExecutionPolicy Bypass -File .skills/run_skill_self_test.ps1 -ProjectRoot . -SkillName update-release-workflow`
+* Report file:
+  * `temp/skill_probe_update-release-workflow.md`

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Publish Release Workflow"
+  short_description: "Set up and verify release publish workflow"
+  default_prompt: "Use $publish-release-workflow to implement or review the release publish process."

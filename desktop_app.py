@@ -1,9 +1,9 @@
 import sys
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication, QSplashScreen
-from PyQt6.QtGui import QPixmap, QPainter, QColor, QPen, QPainterPath, QBitmap
+from PyQt6.QtGui import QPixmap, QPainter, QColor, QPen, QPainterPath
 from PyQt6.QtCore import Qt
-import qdarktheme
+from core.runtime import configure_runtime_logging, initialize_default_timezone
 
 # Import MainWindow inside main() to allow splash screen to show first
 # from ui.main_window import MainWindow 
@@ -16,6 +16,9 @@ def main():
     # Splash Screen Logic
     # ---------------------------
     splash = None
+
+    configure_runtime_logging()
+    timezone_info = initialize_default_timezone()
     
     # Determine logo path
     if getattr(sys, 'frozen', False):
@@ -85,8 +88,35 @@ def main():
             splash = QSplashScreen(canvas, Qt.WindowType.WindowStaysOnTopHint)
             # Mask needed for rounded corners transparency
             splash.setMask(canvas.mask())
-            splash.show()
-            app.processEvents()
+
+    if splash is None:
+        fallback = QPixmap(540, 180)
+        fallback.fill(QColor("#ffffff"))
+        painter = QPainter(fallback)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        pen = QPen(QColor("#d1d5db"))
+        pen.setWidth(1)
+        painter.setPen(pen)
+        painter.drawRoundedRect(0, 0, 539, 179, 12, 12)
+        painter.end()
+        splash = QSplashScreen(fallback, Qt.WindowType.WindowStaysOnTopHint)
+
+    splash.show()
+    app.processEvents()
+
+    def set_startup_status(message):
+        splash.showMessage(
+            message,
+            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom,
+            QColor("#334155"),
+        )
+        app.processEvents()
+        print(f"[startup] {message}", flush=True)
+
+    set_startup_status("Initializing startup...")
+    set_startup_status(
+        f"Default timezone: {timezone_info['timezone_name']} (UTC{timezone_info['offset']})"
+    )
 
     # ---------------------------
     # Global Cleanup / Theme
@@ -94,6 +124,8 @@ def main():
     
     # Apply Excel-like Light Theme
     try:
+        set_startup_status("Loading application theme...")
+        import qdarktheme
         if hasattr(qdarktheme, 'setup_theme'):
              qdarktheme.setup_theme("light", custom_colors={"primary": "#107c41"}) # Excel Green
         else:
@@ -105,9 +137,11 @@ def main():
     # Load Main Application
     # ---------------------------
     # Move import here to allow splash to display while importing
+    set_startup_status("Loading UI modules...")
     from ui.main_window import MainWindow
 
     # Create and Show Main Window
+    set_startup_status("Building main window...")
     window = MainWindow()
     window.show()
     

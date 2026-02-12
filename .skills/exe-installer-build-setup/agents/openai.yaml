@@ -1,0 +1,4 @@
+interface:
+  display_name: "Exe Installer Build Setup"
+  short_description: "Setup and review EXE and installer build flow"
+  default_prompt: "Use $exe-installer-build-setup to implement or review the EXE and installer build workflow."

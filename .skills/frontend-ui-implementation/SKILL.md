@@ -109,3 +109,14 @@ description: Implement and review frontend interfaces for React + Vite + Tailwin
 - **Progressive Disclosure:**
   - Only load `references/guideline.md` or `references/checklist.md` when necessary.
   - Avoid duplicating lengthy information between `SKILL.md` and reference files.
+
+---
+
+### Standardized Self-Test
+
+- Probe token: `SKILL_PROBE_FRONTEND_UI_IMPLEMENTATION`
+- Expected canary first line: `CANARY_FRONTEND_UI_IMPLEMENTATION_OK_20260210`
+- Command:
+  - `powershell -ExecutionPolicy Bypass -File .skills/run_skill_self_test.ps1 -ProjectRoot . -SkillName frontend-ui-implementation`
+- Report file:
+  - `temp/skill_probe_frontend-ui-implementation.md`

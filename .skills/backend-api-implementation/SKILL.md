@@ -105,3 +105,14 @@ description: |
 * **Skill Name:** `name` must use lowercase + numbers + hyphens. Folder name must match.
 * **Constraints:** Keep `description` concise with clear triggers. Keep `SKILL.md` under 500 lines; move detailed content to `references/`.
 * **Progressive Disclosure:** Only load reference files when necessary.
+
+---
+
+### Standardized Self-Test
+
+* Probe token: `SKILL_PROBE_BACKEND_API_IMPLEMENTATION`
+* Expected canary first line: `CANARY_BACKEND_API_IMPLEMENTATION_OK_20260210`
+* Command:
+  * `powershell -ExecutionPolicy Bypass -File .skills/run_skill_self_test.ps1 -ProjectRoot . -SkillName backend-api-implementation`
+* Report file:
+  * `temp/skill_probe_backend-api-implementation.md`

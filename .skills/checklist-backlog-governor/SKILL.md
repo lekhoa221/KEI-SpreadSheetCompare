@@ -88,3 +88,14 @@ description: |
 
 * **Skill Name:** `name` uses lowercase + numbers + hyphens. Folder name must match.
 * **Constraints:** Keep `description` concise with clear triggers. Keep `SKILL.md` focused on the process; do not clutter with domain-specific implementation details.
+
+---
+
+### Standardized Self-Test
+
+* Probe token: `SKILL_PROBE_CHECKLIST_BACKLOG_GOVERNOR`
+* Expected canary first line: `CANARY_CHECKLIST_BACKLOG_GOVERNOR_OK_20260210`
+* Command:
+  * `powershell -ExecutionPolicy Bypass -File .skills/run_skill_self_test.ps1 -ProjectRoot . -SkillName checklist-backlog-governor`
+* Report file:
+  * `temp/skill_probe_checklist-backlog-governor.md`
